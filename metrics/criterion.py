@@ -3,10 +3,11 @@ import torch.nn as nn
 from typing import Tuple
 
 class GWDetectionCriterion(nn.Module):
-    def __init__(self, iou_threshold: float=0.5):
+    def __init__(self, iou_threshold: float=0.5, filter_by_iou: bool = False):
         super(GWDetectionCriterion, self).__init__()
         
         self.iou_threshold = iou_threshold
+        self.filter_by_iou = filter_by_iou
         self.confidence_criterion = nn.BCELoss()
         self.bbox_criterion = nn.HuberLoss()
 
@@ -22,32 +23,29 @@ class GWDetectionCriterion(nn.Module):
         confidence_loss = torch.tensor(0)
 
         for i in range(N):
-            pred = input[i, ...].squeeze(dim=0)                        # shape: (n_pred_boxes, 5)
-            gt = target[i, ...].squeeze(dim=0)                         # shape: (5, )
+            pred = input[i, ...]                                       # shape: (n_pred_boxes, 5)
+            gt = target[i, ...]                                        # shape: (5, )
+            gt = gt.unsqueeze(dim=0).tile(pred.shape[0], 1)            # shape: (n_pred_boxes, 5)
             pred_boxes = pred[:, 1:]                                   # shape: (n_pred_boxes, 4)
-            gt_boxes = gt[1:]                                          # shape: (4, )
-            ious = tuple(
-                map(
-                    lambda pred_box : 
-                    GWDetectionCriterion.compute_iou(
-                        pred_box, 
-                        gt_boxes
-                    ),
-                    pred_boxes
-                )
-            )
-            ious = torch.stack(ious, dim=0)                            # shape: (n_pred_boxes, )
-            valid_indices = torch.nonzero(
-                ious >= self.iou_threshold,
-                as_tuple=False
-            )
-            valid_indices = valid_indices.squeeze()                    # shape: (n_valid_ious, )
-            pred = pred[valid_indices]                                 # shape: (n_valid_ious, 5)
-            pred_boxes = pred[:, 1:]                                   # shape: (n_valid_ious, 4)
-            gt = gt.unsqueeze(dim=0).tile(pred.shape[0], 1)            # shape: (n_valid_ious, 5)
-            gt_boxes = gt[:, 1:]                                       # shape: (n_valid_ious, 4)
-            pred_confidence = pred[:, 0]                               # shape: (n_valid_ious, 1)
-            gt_confidence = gt[:, 0]                                   # shape: (n_valid_ious, 1)
+            gt_boxes = gt[:, 1:]                                       # shape: (n_pred_boxes, 4)
+            pred_confidence = pred[:, 0]                               # shape: (n_pred_boxes, 1)
+            gt_confidence = gt[:, 0]                                   # shape: (n_pred_boxes, 1)
+
+            if self.filter_by_iou:
+                ious = GWDetectionCriterion.compute_iou(
+                    pred_boxes, gt_boxes
+                )                                                          # shape: (n_pred_boxes, )
+                valid_indices = torch.nonzero(
+                    ious >= self.iou_threshold,
+                    as_tuple=False
+                ).squeeze()
+                pred = pred[valid_indices]                             # shape: (n_valid_ious, 5)
+                gt = gt[valid_indices]                                 # shape: (n_valid_ious, 5)
+                pred_boxes = pred[:, 1:]                               # shape: (n_valid_ious, 4)
+                gt_boxes = gt[:, 1:]                                   # shape: (n_valid_ious, 4)
+                pred_confidence = pred[:, 0]                           # shape: (n_valid_ious, 1)
+                gt_confidence = gt[:, 0]                               # shape: (n_valid_ious, 1)
+
             bbox_loss = bbox_loss + self.bbox_criterion(pred_boxes, gt_boxes)
             confidence_loss = confidence_loss + self.confidence_criterion(pred_confidence, gt_confidence)
 
@@ -84,5 +82,5 @@ class GWDetectionCriterion(nn.Module):
         i_area = (xmax_inter-xmin_inter) * (ymax_inter-ymin_inter)
         i_area[i_area < 0] = 0
         u_area = (area1 + area2) - i_area
-        iou = i_area / u_area                           # shape: (N, ) | (1, )
-        return iou.squeeze()
+        iou = i_area / u_area                           
+        return iou.squeeze()                            # shape: (N, ) | (1, )
