@@ -2,7 +2,6 @@ import os, torch, tqdm
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from metrics.criterion import GWDetectionCriterion
-from sklearn.metrics import f1_score, recall_score, precision_score, accuracy_score
 from matplotlib import pyplot as plt
 from typing import Any, Dict, Iterable, Tuple
 
@@ -114,7 +113,7 @@ class TrainingPipeline:
             
             bbox_loss += batch_bbox_loss.item()
             confidence_loss += batch_confidence_loss.item()
-            total_loss += batch_total_loss
+            total_loss += batch_total_loss.item()
 
         bbox_loss /= (idx + 1)
         confidence_loss /= (idx + 1)
@@ -124,7 +123,7 @@ class TrainingPipeline:
         if verbose:
             print((
                 f"{verbosity_label} BBox Loss: {round(bbox_loss, 4)}\
-                  \t{verbosity_label} Confidence Loss: {round(bbox_loss, 4)}\
+                  \t{verbosity_label} Confidence Loss: {round(confidence_loss, 4)}\
                   \t{verbosity_label} Total Loss: {round(total_loss, 4)}"
             ))
             
