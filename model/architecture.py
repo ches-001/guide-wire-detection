@@ -32,7 +32,8 @@ class DetectNET(nn.Module):
             layers.append(
                 nn.Sequential(
                     nn.BatchNorm2d(ch),
-                    nn.Conv2d(ch, self.out_channels, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+                    nn.Conv2d(ch, self.out_channels, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1)),
+                    nn.ReLU(),
                 )
             )
             ch *= 2
