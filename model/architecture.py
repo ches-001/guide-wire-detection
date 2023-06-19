@@ -93,11 +93,17 @@ class BBoxCompiler(nn.Module):
         #3. pred_coordinates size: (N, h, w, n_anchor, bb_coord)
         #4. class_scores size: (N, h, w, n_anchor, class_scores)
 
+        if self.anchors.device != feature_map.device:
+            self.anchors = self.anchors.to(feature_map.device)
+
         feature_map = torch.permute(feature_map, (0, 2, 3, 1))
         N, H, W, _ = feature_map.shape
         feature_map = feature_map.reshape(N, H, W, self.n_anchors, (5+self.n_classes))
 
         grid = self._make_grid(H, W)
+        if grid.device != feature_map.device:
+            grid = grid.to(feature_map.device)
+
         confidence = feature_map[..., 0].unsqueeze(dim=-1)
         boxlocs = feature_map[..., 1:5]
         boxXY = boxlocs[..., 0:2].sigmoid() + grid
