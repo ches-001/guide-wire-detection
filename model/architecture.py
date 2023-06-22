@@ -141,7 +141,7 @@ class BBoxCompiler(nn.Module):
         xindex = torch.arange(nx)
         yindex = torch.arange(ny)
         ygrid, xgrid = torch.meshgrid([yindex, xindex], indexing='ij')
-        return torch.stack((xgrid, ygrid), 2).reshape(1, ny, nx, 1, 2).float()
+        return torch.stack((xgrid, ygrid), dim=2).reshape(1, ny, nx, 1, 2).float()
 
 
 class GWDetectionNET(nn.Module):
