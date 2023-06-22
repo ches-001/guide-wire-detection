@@ -107,15 +107,17 @@ class BBoxCompiler(nn.Module):
         N, H, W, _ = feature_map.shape
         feature_map = feature_map.reshape(N, H, W, self.n_anchors, (5+self.n_classes))
 
-        grid = self._make_grid(H, W)
+        grid = self._make_grid(W, H)
         if grid.device != feature_map.device:
             grid = grid.to(feature_map.device)
 
-        stride = self.img_size // torch.Tensor((H, W))       # downsample scale
+        stride = self.img_size // torch.Tensor((W, H))       # downsample scale (width_stride, height_stride)
         confidence = feature_map[..., 0].unsqueeze(dim=-1)
         boxlocs = feature_map[..., 1:5]
         boxXY = (boxlocs[..., 0:2].sigmoid() + grid) * stride
         boxWH = torch.exp(boxlocs[..., 2:4]) * self.anchors
+        boxXY = boxXY / self.img_size
+        boxWH = boxWH / self.img_size                        # scale final output by original image dimensions
         confidence = confidence.sigmoid()
         class_scores = feature_map[..., 5:]
         bboxes = torch.cat((boxXY, boxWH), dim=-1)
@@ -133,16 +135,13 @@ class BBoxCompiler(nn.Module):
             .cat((confidence, bboxes, class_scores), dim=-1)
             .reshape(N, -1, self.n_classes+5)
         )
-        print(bboxes[0][0])
         return bboxes
         
-    def _make_grid(self, ny: int, nx: int):
-        hindex = torch.arange(0, ny).unsqueeze(dim=-1)
-        windex = torch.arange(0, nx).unsqueeze(dim=0)
-        hindex = hindex.tile(1, nx)
-        windex = windex.tile(ny, 1)
-        grid = torch.stack((windex, hindex), dim=-1)
-        return grid.reshape(1, ny, nx, 1, 2)
+    def _make_grid(self, nx: int, ny: int):
+        xindex = torch.arange(nx)
+        yindex = torch.arange(ny)
+        ygrid, xgrid = torch.meshgrid([yindex, xindex], indexing='ij')
+        return torch.stack((xgrid, ygrid), 2).view((1, ny, nx, 1, 2)).float()
 
 
 class GWDetectionNET(nn.Module):
@@ -160,7 +159,8 @@ class GWDetectionNET(nn.Module):
         
         super(GWDetectionNET, self).__init__()
         
-        self.img_size = torch.Tensor(img_size)
+        H, W = img_size
+        self.img_size = torch.Tensor((W, H))
         self._load_and_set_anchors(anchors_path)
         anchors = [self.sm_anchors, self.md_anchors, self.lg_anchors]
         n_anchors = len(anchors[0])
