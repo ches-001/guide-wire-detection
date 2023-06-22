@@ -23,7 +23,8 @@ def draw_bbox(
         dw: int=40, 
         dh: int=40, 
         save_bbox: bool=False, 
-        save_dir: Optional[str]=None, 
+        save_dir: Optional[str]=None,
+        center_xy: bool=True, 
         scale_bbox: bool=True) -> Tuple[np.ndarray, Iterable[float]]:
     
     sample_img = cv2.imread(gt_path, cv2.IMREAD_GRAYSCALE)
@@ -44,11 +45,20 @@ def draw_bbox(
     w += dw
     h += dh
     bbox = (x, y, w, h)
-    if scale_bbox:
-        bbox = (x/W, y/H, w/W, h/H)
 
     bbox_img = cv2.rectangle(sample_img, (x, y), (x+w, y+h), (255), 5)
 
+    if center_xy:
+        x = x + (w/2)
+        y = y + (h/2)
+
+    if scale_bbox:
+        x = x/W
+        y = y/H
+        w = w/W
+        h = h/H
+
+    bbox = (x, y, w, h)
     if save_bbox:
         bbox_filename = f"{os.path.split(gt_path)[-1].split('.')[0]}.txt"
         save_dir = os.path.join(save_dir, "BBox")
@@ -115,6 +125,7 @@ async def main(
 
 if __name__ == "__main__":
     import logging
+
     logging.basicConfig(level=logging.INFO, format="\n%(asctime)s - %(levelname)s - %(message)s")
 
     try:

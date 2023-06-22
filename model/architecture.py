@@ -18,7 +18,10 @@ class DetectNET(nn.Module):
         self.out_channels = self.n_anchors * (self.n_classes + 5)
         self.projectors = self._build_conv_projector()
 
-    def forward(self, fmaps: Iterable[torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(
+            self, 
+            fmaps: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+            ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         new_fmaps = []
         for i, fmap in enumerate(fmaps):
             fmap = self.projectors[i](fmap)
@@ -33,7 +36,6 @@ class DetectNET(nn.Module):
                 nn.Sequential(
                     nn.BatchNorm2d(ch),
                     nn.Conv2d(ch, self.out_channels, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1)),
-                    nn.ReLU(),
                 )
             )
             ch *= 2
@@ -82,9 +84,10 @@ class BackBoneNET(ResNet):
     
 
 class BBoxCompiler(nn.Module):
-    def __init__(self, anchors: torch.Tensor, n_classes: int):
+    def __init__(self, anchors: torch.Tensor, img_size: torch.Tensor, n_classes: int):
         super(BBoxCompiler, self).__init__()
-        self.anchors = anchors
+        self.register_buffer("img_size", img_size)
+        self.register_buffer("anchors", anchors * img_size, persistent=True)
         self.n_classes = n_classes
         self.n_anchors = len(self.anchors)
     
@@ -97,6 +100,9 @@ class BBoxCompiler(nn.Module):
         if self.anchors.device != feature_map.device:
             self.anchors = self.anchors.to(feature_map.device)
 
+        if self.img_size.device != feature_map.device:
+            self.img_size = self.img_size.to(feature_map.device)
+
         feature_map = torch.permute(feature_map, (0, 2, 3, 1))
         N, H, W, _ = feature_map.shape
         feature_map = feature_map.reshape(N, H, W, self.n_anchors, (5+self.n_classes))
@@ -105,9 +111,10 @@ class BBoxCompiler(nn.Module):
         if grid.device != feature_map.device:
             grid = grid.to(feature_map.device)
 
+        stride = self.img_size // torch.Tensor((H, W))       # downsample scale
         confidence = feature_map[..., 0].unsqueeze(dim=-1)
         boxlocs = feature_map[..., 1:5]
-        boxXY = boxlocs[..., 0:2].sigmoid() + grid
+        boxXY = (boxlocs[..., 0:2].sigmoid() + grid) * stride
         boxWH = torch.exp(boxlocs[..., 2:4]) * self.anchors
         confidence = confidence.sigmoid()
         class_scores = feature_map[..., 5:]
@@ -126,6 +133,7 @@ class BBoxCompiler(nn.Module):
             .cat((confidence, bboxes, class_scores), dim=-1)
             .reshape(N, -1, self.n_classes+5)
         )
+        print(bboxes[0][0])
         return bboxes
         
     def _make_grid(self, ny: int, nx: int):
@@ -140,7 +148,8 @@ class BBoxCompiler(nn.Module):
 class GWDetectionNET(nn.Module):
     def __init__(
             self, 
-            input_channels: int, 
+            input_channels: int,
+            img_size: Tuple[int, int],
             *,
             anchors_path: str,
             n_classes: int=0,
@@ -151,13 +160,16 @@ class GWDetectionNET(nn.Module):
         
         super(GWDetectionNET, self).__init__()
         
+        self.img_size = torch.Tensor(img_size)
         self._load_and_set_anchors(anchors_path)
         anchors = [self.sm_anchors, self.md_anchors, self.lg_anchors]
         n_anchors = len(anchors[0])
         self.backbone = BackBoneNET(input_channels, block, block_layers, pretrained_resnet_backbone)
         self.detect_net = DetectNET(n_anchors, n_classes, last_fmap_ch)
         ## bbox compiler for small, mid and large anchors
-        self.bbox_compiler = nn.ModuleList([BBoxCompiler(anchors[i], n_classes) for i in range(3)])
+        self.bbox_compiler = nn.ModuleList([
+            BBoxCompiler(anchors[i], self.img_size, n_classes) for i in range(3)
+        ])
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         fmap1, fmap2, fmap3 = self.backbone(x)
