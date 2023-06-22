@@ -111,13 +111,13 @@ class BBoxCompiler(nn.Module):
         if grid.device != feature_map.device:
             grid = grid.to(feature_map.device)
 
-        stride = self.img_size // torch.Tensor((W, H))       # downsample scale (width_stride, height_stride)
+        stride = self.img_size // torch.Tensor((W, H)).to(feature_map.device)  # downsample scale (width_stride, height_stride)
         confidence = feature_map[..., 0].unsqueeze(dim=-1)
         boxlocs = feature_map[..., 1:5]
         boxXY = (boxlocs[..., 0:2].sigmoid() + grid) * stride
         boxWH = torch.exp(boxlocs[..., 2:4]) * self.anchors
         boxXY = boxXY / self.img_size
-        boxWH = boxWH / self.img_size                        # scale final output by original image dimensions
+        boxWH = boxWH / self.img_size                                          # scale final output by original image dimensions
         confidence = confidence.sigmoid()
         class_scores = feature_map[..., 5:]
         bboxes = torch.cat((boxXY, boxWH), dim=-1)
