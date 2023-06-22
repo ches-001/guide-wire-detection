@@ -84,4 +84,4 @@ class GWDetectionCriterion(nn.Module):
         ious = i_area / u_area
         ious[x_rights < x_lefts] = 0
         ious[y_bottoms < y_tops] = 0
-        return ious.squeeze()                            # shape: (N, ) | (1, )
+        return ious.squeeze()                           # shape: (N, ) | (1, )
