@@ -74,13 +74,14 @@ class GWDetectionCriterion(nn.Module):
         x2, y2, w2, h2 = gt_boxes.permute(1, 0)
         area1, area2 = (w1 * h1), (w2 * h2)
 
-        xmin_inter = torch.cat((x1, x2), dim=-1).max(dim=-1).values
-        ymin_inter = torch.cat((y1, y2), dim=-1).max(dim=-1).values
-        xmax_inter = torch.cat((x1+w1, x2+w2), dim=-1).min(dim=-1).values
-        ymax_inter = torch.cat((y1+h1, y2+h2), dim=-1).min(dim=-1).values
+        x_lefts = torch.stack((x1, x2), dim=-1).max(dim=-1).values
+        y_tops = torch.stack((y1, y2), dim=-1).max(dim=-1).values
+        x_rights = torch.stack((x1+w1, x2+w2), dim=-1).min(dim=-1).values
+        y_bottoms = torch.stack((y1+h1, y2+h2), dim=-1).min(dim=-1).values
 
-        i_area = (xmax_inter-xmin_inter) * (ymax_inter-ymin_inter)
-        i_area[i_area < 0] = 0
+        i_area = (x_rights-x_lefts) * (y_bottoms-y_tops)
         u_area = (area1 + area2) - i_area
-        iou = i_area / u_area                           
-        return iou.squeeze()                            # shape: (N, ) | (1, )
+        ious = i_area / u_area
+        ious[x_rights < x_lefts] = 0
+        ious[y_bottoms < y_tops] = 0
+        return ious.squeeze()                            # shape: (N, ) | (1, )
