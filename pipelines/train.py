@@ -98,12 +98,12 @@ class TrainingPipeline:
         getattr(self.model, mode)()
         bbox_loss, confidence_loss, total_loss = 0, 0, 0
         
-        for idx, (signals, labels) in tqdm.tqdm(enumerate(dataloader)):
-            signals = signals.to(self.device)       #shape: (N, n_channels, n_time)
-            labels = labels.to(self.device)         #shape: (N, 1)    
+        for idx, (images, bboxes) in tqdm.tqdm(enumerate(dataloader)):
+            images = images.to(self.device)       #shape: (N, n_channels, n_time)
+            bboxes = bboxes.to(self.device)         #shape: (N, 1)    
                         
-            preds = self.model(signals)
-            batch_bbox_loss, batch_confidence_loss = self.lossfunc(preds, labels)
+            pred_bboxes = self.model(images)
+            batch_bbox_loss, batch_confidence_loss = self.lossfunc(pred_bboxes, bboxes)
             batch_total_loss = batch_bbox_loss + batch_confidence_loss
             
             if mode == "train":
