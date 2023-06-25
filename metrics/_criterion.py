@@ -3,11 +3,10 @@ import torch.nn as nn
 from typing import Tuple
 
 class GWDetectionCriterion(nn.Module):
-    def __init__(self, iou_threshold: float=0.5, filter_by_iou: bool = False):
+    def __init__(self, iou_threshold: float=0.5):
         super(GWDetectionCriterion, self).__init__()
         
         self.iou_threshold = iou_threshold
-        self.filter_by_iou = filter_by_iou
         self.confidence_criterion = nn.BCELoss()
         self.bbox_criterion = nn.HuberLoss()
 
@@ -31,20 +30,15 @@ class GWDetectionCriterion(nn.Module):
             pred_confidence = pred[:, 0]                               # shape: (n_pred_boxes, 1)
             gt_confidence = gt[:, 0]                                   # shape: (n_pred_boxes, 1)
 
-            if self.filter_by_iou:
-                ious = GWDetectionCriterion.compute_iou(
-                    pred_boxes, gt_boxes
-                )                                                          # shape: (n_pred_boxes, )
-                valid_indices = torch.nonzero(
-                    ious >= self.iou_threshold,
-                    as_tuple=False
-                ).squeeze()
-                pred = pred[valid_indices]                             # shape: (n_valid_ious, 5)
-                gt = gt[valid_indices]                                 # shape: (n_valid_ious, 5)
-                pred_boxes = pred[:, 1:]                               # shape: (n_valid_ious, 4)
-                gt_boxes = gt[:, 1:]                                   # shape: (n_valid_ious, 4)
-                pred_confidence = pred[:, 0]                           # shape: (n_valid_ious, 1)
-                gt_confidence = gt[:, 0]                               # shape: (n_valid_ious, 1)
+            ious = GWDetectionCriterion.compute_iou(
+                pred_boxes, gt_boxes
+            )                                                          # shape: (n_pred_boxes, )
+            invalid_indices = torch.nonzero(
+                ious < self.iou_threshold,
+                as_tuple=False
+            ).squeeze()
+
+            gt_confidence[invalid_indices] = 0                        # set confidence of all bboxes below threshold to 0.
 
             bbox_loss = bbox_loss + self.bbox_criterion(pred_boxes, gt_boxes)
             confidence_loss = confidence_loss + self.confidence_criterion(pred_confidence, gt_confidence)
