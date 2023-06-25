@@ -38,6 +38,8 @@ class GWDetectionCriterion(nn.Module):
                 as_tuple=False
             ).squeeze()
 
+            gt_confidence = gt_confidence * ious
+            gt_confidence[gt_confidence == gt_confidence.max()] = 1
             gt_confidence[invalid_indices] = 0                        # set confidence of all bboxes below threshold to 0.
 
             bbox_loss = bbox_loss + self.bbox_criterion(pred_boxes, gt_boxes)
