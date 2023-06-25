@@ -52,9 +52,10 @@ class BaseTrainingPipeline:
     
 
     def load_model(self):
-        if not os.path.isdir(self.dirname):
-            raise OSError(f"model is yet to be saved in path: {os.path.join(self.dirname, self.filename)}")
-        saved_params = torch.load(os.path.join(self.dirname, self.filename), map_location=self.device)
+        model_path = os.path.join(self.dirname, self.filename)
+        if not os.path.exists(model_path):
+            raise OSError(f"model is yet to be saved in path: {model_path}")
+        saved_params = torch.load(model_path, map_location=self.device)
         return self.model.load_state_dict(saved_params["network_params"])
     
 
