@@ -33,7 +33,6 @@ class BackBoneNET(ResNet):
         #delete unwanted layers
         del self.maxpool, self.fc, self.avgpool
         
-        
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         if self.input_channels != 3:
             x = self.rgb_channel_projector(x)
