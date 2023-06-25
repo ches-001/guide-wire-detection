@@ -51,6 +51,13 @@ class BaseTrainingPipeline:
         return torch.save(state_dicts, os.path.join(self.dirname, self.filename))
     
 
+    def load_model(self):
+        if not os.path.isdir(self.dirname):
+            raise OSError(f"model is yet to be saved in path: {os.path.join(self.dirname, self.filename)}")
+        saved_params = torch.load(os.path.join(self.dirname, self.filename), map_location=self.device)
+        return self.model.load_state_dict(saved_params["network_params"])
+    
+
     def get_metric(self) -> Tuple[Dict[str, Iterable[float]], Dict[str, Iterable[float]]]:
         if not hasattr(self, "_train_metrics_dict") or not hasattr(self, "_eval_metrics_dict"):
             raise NotImplementedError(
