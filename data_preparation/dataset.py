@@ -70,13 +70,11 @@ class FrameDataset(Dataset):
             sample_bboxes_folder = os.path.join(sample_feed_folder, self.bbox_loc)
             sample_mask_folder = os.path.join(sample_feed_folder, self.mask_loc)
             sample_frames = os.listdir(sample_frames_folder)
-            sample_bboxes = os.listdir(sample_bboxes_folder)
-            sample_masks = os.listdir(sample_mask_folder)
 
-            for img, bbox, mask in zip(sample_frames, sample_bboxes, sample_masks):
-                img_path = os.path.join(sample_frames_folder, img)
-                bbox_path = os.path.join(sample_bboxes_folder, bbox)
-                mask_path = os.path.join(sample_mask_folder, mask)
+            for _img_path in sample_frames:
+                img_path = os.path.join(sample_frames_folder, _img_path)
+                bbox_path = os.path.join(sample_bboxes_folder, _img_path.replace(".png", ".txt"))
+                mask_path = os.path.join(sample_mask_folder, _img_path)
                 paths_tuples.append((img_path, bbox_path, mask_path))
         return paths_tuples
 
