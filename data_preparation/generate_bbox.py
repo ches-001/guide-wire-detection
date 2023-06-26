@@ -1,7 +1,7 @@
 import cv2, os, glob, asyncio, tqdm
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Optional, Dict, Iterable, Tuple
+from typing import Optional, Dict, Iterable, Tuple, Union
 
 
 def get_sample_feed_dict(data_path: str, gt_subfolder_name: str) -> Dict[str, Iterable[str]]:
@@ -17,7 +17,7 @@ def get_sample_feed_dict(data_path: str, gt_subfolder_name: str) -> Dict[str, It
 
 
 def draw_bbox(
-        gt_path: str, 
+        mask: Union[str, np.ndarray, os.PathLike], 
         dx: int=-15, 
         dy: int=-15, 
         dw: int=40, 
@@ -25,9 +25,17 @@ def draw_bbox(
         save_bbox: bool=False, 
         save_dir: Optional[str]=None,
         center_xy: bool=True, 
-        scale_bbox: bool=True) -> Tuple[np.ndarray, Iterable[float]]:
+        scale_bbox: bool=True,
+        line_thickness=1) -> Tuple[np.ndarray, Iterable[float]]:
     
-    sample_img = cv2.imread(gt_path, cv2.IMREAD_GRAYSCALE)
+    if isinstance(mask, str) or isinstance(mask, os.PathLike):
+        sample_img = cv2.imread(mask, cv2.IMREAD_GRAYSCALE)
+    elif isinstance(mask, np.ndarray):
+        sample_img = mask
+    else:
+        raise ValueError(
+            f"mask is of invalid type, expected to be {str.__name__}, \
+                {os.PathLike.__name__} or {np.ndarray.__name__}, got {type(mask)} instead")
     H, W = sample_img.shape
     min_pixel = sample_img.min()
     max_pixel = sample_img.max()
@@ -46,7 +54,7 @@ def draw_bbox(
     h += dh
     bbox = (x, y, w, h)
 
-    bbox_img = cv2.rectangle(sample_img, (x, y), (x+w, y+h), (255), 5)
+    bbox_img = cv2.rectangle(sample_img, (x, y), (x+w, y+h), (255), line_thickness)
 
     if center_xy:
         x = x + (w/2)

@@ -300,22 +300,24 @@ class GWDetectionNET(nn.Module):
         self.use_segnet = use_segnet
         self.use_locnet = use_locnet
 
-        self.img_size = torch.Tensor((W, H))
-        self._load_and_set_anchors(anchors_path)
-        anchors = [self.sm_anchors, self.md_anchors, self.lg_anchors]
-        n_anchors = len(anchors[0])
-
         # backbone network
         self.backbone = BackBoneNET(input_channels, block, block_layers, pretrained_resnet_backbone)
 
         # bbox prediction nets
-        self.detect_net = DetectNET(n_anchors, n_classes, last_fmap_ch)
-        self.bbox_compiler = nn.ModuleList([
-            BBoxCompiler(anchors[i], self.img_size, n_classes) for i in range(3)
-        ])
+        if self.use_locnet:
+            self.img_size = torch.Tensor((W, H))
+            self._load_and_set_anchors(anchors_path)
+            anchors = [self.sm_anchors, self.md_anchors, self.lg_anchors]
+            n_anchors = len(anchors[0])
+
+            self.detect_net = DetectNET(n_anchors, n_classes, last_fmap_ch)
+            self.bbox_compiler = nn.ModuleList([
+                BBoxCompiler(anchors[i], self.img_size, n_classes) for i in range(3)
+            ])
 
         # segmentation net
-        self.segmentation_net = SegmentationNET(last_fmap_ch, seg_output_ch, n_fmap=3)
+        if self.use_segnet:
+            self.segmentation_net = SegmentationNET(last_fmap_ch, seg_output_ch, n_fmap=3)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         fmap1, fmap2, fmap3 = self.backbone(x)
