@@ -67,8 +67,8 @@ def draw_bbox(
         h = h/H
 
     bbox = (x, y, w, h)
-    if save_bbox:
-        bbox_filename = f"{os.path.split(gt_path)[-1].split('.')[0]}.txt"
+    if save_bbox and (isinstance(mask, str) or isinstance(mask, os.PathLike)):
+        bbox_filename = f"{os.path.split(mask)[-1].split('.')[0]}.txt"
         save_dir = os.path.join(save_dir, "BBox")
         if not os.path.isdir(save_dir):
             os.makedirs(save_dir)
