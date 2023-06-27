@@ -50,13 +50,13 @@ class BackBoneNET(ResNet):
 #______________________________________________________________________________________________
 # Object Localisation Network(s)                                                               |
 #______________________________________________________________________________________________|
-class DetectNET(nn.Module):
+class DetectionHead(nn.Module):
     def __init__(
             self, 
             n_anchors: int, 
             n_classes: int, 
             last_fmap_ch: int=512):
-        super(DetectNET, self).__init__()
+        super(DetectionHead, self).__init__()
 
         self.n_anchors = n_anchors
         self.n_classes = n_classes
@@ -88,9 +88,9 @@ class DetectNET(nn.Module):
         return nn.ModuleList(layers)
 
 
-class BBoxCompiler(nn.Module):
+class BBoxHead(nn.Module):
     def __init__(self, anchors: torch.Tensor, img_size: torch.Tensor, n_classes: int):
-        super(BBoxCompiler, self).__init__()
+        super(BBoxHead, self).__init__()
         self.register_buffer("img_size", img_size)
         self.register_buffer("anchors", anchors * img_size, persistent=True)
         self.n_classes = n_classes
@@ -209,14 +209,14 @@ class SegmentationBlock(nn.Module):
         return output
     
 
-class SegmentationNET(nn.Module):
+class SegmentationHead(nn.Module):
     def __init__(
         self, 
         last_fmap_ch: int, 
         output_channels: int,
         n_fmap: int=3):
 
-        super(SegmentationNET, self).__init__()
+        super(SegmentationHead, self).__init__()
         
         self.last_fmap_ch = last_fmap_ch
         self.output_channels = output_channels
@@ -310,14 +310,14 @@ class GWDetectionNET(nn.Module):
             anchors = [self.sm_anchors, self.md_anchors, self.lg_anchors]
             n_anchors = len(anchors[0])
 
-            self.detect_net = DetectNET(n_anchors, n_classes, last_fmap_ch)
+            self.detect_net = DetectionHead(n_anchors, n_classes, last_fmap_ch)
             self.bbox_compiler = nn.ModuleList([
-                BBoxCompiler(anchors[i], self.img_size, n_classes) for i in range(3)
+                BBoxHead(anchors[i], self.img_size, n_classes) for i in range(3)
             ])
 
         # segmentation net
         if self.use_segnet:
-            self.segmentation_net = SegmentationNET(last_fmap_ch, seg_output_ch, n_fmap=3)
+            self.segmentation_net = SegmentationHead(last_fmap_ch, seg_output_ch, n_fmap=3)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         fmap1, fmap2, fmap3 = self.backbone(x)
