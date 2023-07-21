@@ -12,7 +12,7 @@ class FrameDataset(Dataset):
             bbox_loc: str="BBox", 
             mask_loc: str="Label",
             img_loc: str="Image",  
-            grayscale: bool=False, 
+            grayscale: bool=True, 
             size: Optional[Tuple[int, int]] = (224, 224),
             transforms: Optional[Compose]=None):
         
