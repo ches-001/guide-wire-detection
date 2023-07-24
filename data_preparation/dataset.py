@@ -37,7 +37,7 @@ class FrameDataset(Dataset):
         img_path, bbox_path, mask_path = self.img_bbox_mask[idx]
         img = self._load_img(img_path).astype(np.float32)
         bbox = self._load_bbox(bbox_path)
-        mask = self._load_img(mask_path).astype(np.float32)
+        mask = self._load_mask(mask_path).astype(np.float32)
 
         img = self._normalize_img(img)
         img = torch.from_numpy(img)
@@ -80,10 +80,14 @@ class FrameDataset(Dataset):
 
 
     def _load_img(self, img_path: str) -> np.ndarray:
-        color_flag = cv2.COLOR_BGR2RGB if not self.grayscale else cv2.IMREAD_GRAYSCALE
+        color_flag = cv2.IMREAD_COLOR if not self.grayscale else cv2.IMREAD_GRAYSCALE
         img = cv2.imread(img_path, color_flag)
         if img.ndim == 3:
             img = np.transpose(img, (2, 0, 1))
+        return img
+    
+    def _load_mask(self, mask_path: str) -> np.ndarray:
+        img = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
         return img
 
 
