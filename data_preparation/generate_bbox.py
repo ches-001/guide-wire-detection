@@ -128,7 +128,6 @@ async def main(
                 save_bbox=True, 
                 save_dir=sample_dir)
             )
-    
     [await _ for _ in tqdm.tqdm(asyncio.as_completed(tasks))]
 
 if __name__ == "__main__":
