@@ -36,6 +36,8 @@ def prepare_img_and_bbox(
     size = (H, W) if scaled_bbox else None
     bbox = prepare_bbox(bbox, size, xy_centered=xy_centered)
     img = np.transpose(img, axes=(1, 2, 0))
+    if img.shape[-1] == 1:
+        np.squeeze(img, axis=-1)
     return img, bbox
 
 
@@ -52,7 +54,6 @@ def draw_bbox_on_img(
         ch = (0, 200, 90) 
     else: 
         ch = (255,)
-        img = np.squeeze(img, axis=0)
     return cv2.rectangle(img.copy(), (x, y), (x+w, y+h), ch, 2)
 
 
