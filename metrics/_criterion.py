@@ -37,6 +37,7 @@ class GWDetectionCriterion(nn.Module):
                 ious < self.iou_threshold,
                 as_tuple=False
             ).squeeze()
+            gt_boxes[invalid_indices] = 0                             # set coordinates of all bboxes below threshold to 0.
             gt_confidence[invalid_indices] = 0                        # set confidence of all bboxes below threshold to 0.
 
             bbox_loss = bbox_loss + self.bbox_criterion(pred_boxes, gt_boxes)
