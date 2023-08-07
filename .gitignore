@@ -1,7 +1,7 @@
 **/__pycache__/
+.colab
 data/
 saved_model/
-colab_code/
 results_notebook.ipynb
 inference.py
 bbox_dynamics_analysis.ipynb

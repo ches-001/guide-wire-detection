@@ -15,7 +15,7 @@ class KalmanFilter:
         process noise covariance
     H ndarray[M, N]:
         Measurement square matrix (for mapping state space to measurement)
-    R ndarray[N, N]:
+    R ndarray[M, M]:
         Measurement covarience matrix (uncertainties in measurement)
     B ndarray[N, 1]:
         control input transition matrix
